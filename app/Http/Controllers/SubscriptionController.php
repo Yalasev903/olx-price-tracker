@@ -8,6 +8,10 @@ use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Log;
 use GuzzleHttp\Client;
 use Symfony\Component\DomCrawler\Crawler;
+use Illuminate\Support\Facades\URL;
+use App\Mail\VerificationEmail;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Str;
 
 class SubscriptionController extends Controller
 {
@@ -27,16 +31,21 @@ class SubscriptionController extends Controller
             $url = mb_convert_encoding($request->input('url'), 'UTF-8', 'auto');
             $email = mb_convert_encoding($request->input('email'), 'UTF-8', 'auto');
 
-            // Создаем подписку
+            // Создаем подписку, добавляем токен подтверждения
             $subscription = Subscription::create([
                 'url' => $url,
                 'email' => $email,
+                'verification_token' => Str::random(32),
+                'is_verified' => false, // Подписка еще не подтверждена
             ]);
 
             // Логируем данные подписки
             Log::info('New subscription: ', ['url' => $url, 'email' => $email]);
 
-            return response()->json(['message' => 'Subscription successful'], 200);
+            // Отправляем email с ссылкой на подтверждение
+            Mail::to($email)->send(new VerificationEmail($subscription));
+
+            return response()->json(['message' => 'Subscription successful. Please check your email to verify.'], 200);
         } catch (\Exception $e) {
             // Логируем ошибку
             Log::error('Subscription failed: ' . $e->getMessage());
@@ -61,5 +70,38 @@ class SubscriptionController extends Controller
             Log::error('Failed to fetch price: ' . $e->getMessage());
             return null; // Вернуть null или выбросить исключение, если нужно
         }
+    }
+
+    public function sendVerificationEmail($email, $subscriptionId)
+{
+    $verificationUrl = URL::temporarySignedRoute(
+        'subscription.verify', // Создай этот маршрут
+        now()->addMinutes(30), // Время действия ссылки
+        ['id' => $subscriptionId]
+    );
+
+    Mail::to($email)->send(new \App\Mail\VerificationEmail($verificationUrl));
+}
+public function verify($id, Request $request)
+    {
+        $subscription = Subscription::find($id);
+
+        if (!$subscription) {
+            return response()->json(['message' => 'Subscription not found'], 404);
+        }
+
+        if ($subscription->is_verified) {
+            return response()->json(['message' => 'Subscription already verified'], 200);
+        }
+
+        if ($request->query('token') !== $subscription->verification_token) {
+            return response()->json(['message' => 'Invalid verification token'], 400);
+        }
+
+        // Подтверждаем подписку
+        $subscription->is_verified = true;
+        $subscription->save();
+
+        return response()->json(['message' => 'Subscription verified successfully'], 200);
     }
 }

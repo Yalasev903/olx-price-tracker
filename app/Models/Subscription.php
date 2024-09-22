@@ -9,5 +9,9 @@ class Subscription extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['url', 'email'];
+    protected $fillable = ['url', 'email', 'verification_token', 'is_verified'];
+
+    protected $casts = [
+        'is_verified' => 'boolean',
+    ];
 }
