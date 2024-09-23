@@ -12,7 +12,9 @@ return new class extends Migration
     public function up()
     {
         Schema::table('subscriptions', function (Blueprint $table) {
-            $table->string('verification_token')->nullable(); // добавляем поле
+            if (!Schema::hasColumn('subscriptions', 'verification_token')) {
+                $table->string('verification_token')->nullable(); // добавляем поле
+            }
         });
     }
 

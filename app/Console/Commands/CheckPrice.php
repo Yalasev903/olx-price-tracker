@@ -14,28 +14,53 @@ class CheckPrice extends Command
 
     public function handle()
     {
+        // Получаем все подписки, которые подтверждены
         $subscriptions = Subscription::where('is_verified', 1)->get();
+
         foreach ($subscriptions as $subscription) {
             // Логика парсинга цены
             $currentPrice = $this->getPriceFromUrl($subscription->url);
 
+            // Проверяем, изменилась ли цена
             if ($currentPrice !== null && $currentPrice != $subscription->last_checked_price) {
-                // Логика отправки уведомления
+                // Отправляем уведомление пользователю
                 $this->notifyUser($subscription->email, $currentPrice);
+                // Обновляем последнюю проверенную цену
                 $subscription->last_checked_price = $currentPrice;
                 $subscription->save();
             }
         }
     }
 
-    private function getPriceFromUrl($url)
+    public function getPriceFromUrl($url)
     {
-        // Реализуйте логику парсинга цены из URL
-        // Верните цену как число
+        try {
+            // Отправляем GET-запрос
+            $response = Http::get($url);
+
+            // Проверяем успешность запроса
+            if ($response->successful()) {
+                $html = $response->body();
+
+                // Логика парсинга HTML для получения цены
+                preg_match('/<span class="price">(\d+[\.,]?\d*)<\/span>/', $html, $matches);
+
+                // Если цена найдена, возвращаем её
+                if (isset($matches[1])) {
+                    return (float) str_replace(',', '.', $matches[1]);
+                }
+            }
+        } catch (\Exception $e) {
+            // Логируем ошибки
+            \Log::error("Error fetching price from URL: {$url}", ['error' => $e->getMessage()]);
+        }
+
+        return null; // Если произошла ошибка, возвращаем null
     }
 
     private function notifyUser($email, $price)
     {
+        // Отправляем email с уведомлением о смене цены
         \Mail::to($email)->send(new PriceChanged($price));
     }
 }
