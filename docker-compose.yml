@@ -9,9 +9,16 @@ services:
       - .:/var/www/html
     ports:
       - "9000:9000"
+    environment:
+      - APP_ENV=local
+      - DB_HOST=db
+      - DB_DATABASE=olx_db
+      - DB_USERNAME=user
+      - DB_PASSWORD=secret
     command: php artisan serve --host=0.0.0.0 --port=9000
     depends_on:
       - db
+
   db:
     image: mysql:5.7
     environment:
@@ -21,5 +28,27 @@ services:
       MYSQL_PASSWORD: secret
     volumes:
       - dbdata:/var/lib/mysql
+    ports:
+      - "3306:3306"
+
+  test:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    working_dir: /var/www/html
+    volumes:
+      - .:/var/www/html
+    environment:
+      - APP_ENV=testing
+      - DB_CONNECTION=mysql
+      - DB_HOST=db
+      - DB_DATABASE=olx_test_db  # Используем отдельную базу данных для тестов
+      - DB_USERNAME=user
+      - DB_PASSWORD=secret
+    depends_on:
+      - db
+    command: |
+      sh -c "php artisan migrate --env=testing && php artisan test"
+
 volumes:
   dbdata:

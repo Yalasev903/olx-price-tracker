@@ -31,6 +31,15 @@ class SubscriptionController extends Controller
             $url = mb_convert_encoding($request->input('url'), 'UTF-8', 'auto');
             $email = mb_convert_encoding($request->input('email'), 'UTF-8', 'auto');
 
+            // Проверяем, существует ли уже подписка
+            $existingSubscription = Subscription::where('url', $url)
+                                                 ->where('email', $email)
+                                                 ->first();
+
+            if ($existingSubscription) {
+                return response()->json(['message' => 'You are already subscribed to this URL.'], 409);
+            }
+
             // Создаем подписку, добавляем токен подтверждения
             $subscription = Subscription::create([
                 'url' => $url,
@@ -73,16 +82,17 @@ class SubscriptionController extends Controller
     }
 
     public function sendVerificationEmail($email, $subscriptionId)
-{
-    $verificationUrl = URL::temporarySignedRoute(
-        'subscription.verify', // Создай этот маршрут
-        now()->addMinutes(30), // Время действия ссылки
-        ['id' => $subscriptionId]
-    );
+    {
+        $verificationUrl = URL::temporarySignedRoute(
+            'subscription.verify', // Создай этот маршрут
+            now()->addMinutes(30), // Время действия ссылки
+            ['id' => $subscriptionId]
+        );
 
-    Mail::to($email)->send(new \App\Mail\VerificationEmail($verificationUrl));
-}
-public function verify($id, Request $request)
+        Mail::to($email)->send(new \App\Mail\VerificationEmail($verificationUrl));
+    }
+
+    public function verify($id, Request $request)
     {
         $subscription = Subscription::findOrFail($id);
         $subscription->is_verified = 1;

@@ -14,4 +14,10 @@ class Subscription extends Model
     protected $casts = [
         'is_verified' => 'boolean',
     ];
+
+    public function priceHistories()
+{
+    return $this->hasMany(PriceHistory::class);
+}
+
 }

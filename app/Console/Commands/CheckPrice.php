@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
 use App\Models\Subscription;
+use App\Models\PriceHistory;
 use Illuminate\Support\Facades\Http;
 use App\Mail\PriceChanged;
 
@@ -23,8 +24,16 @@ class CheckPrice extends Command
 
             // Проверяем, изменилась ли цена
             if ($currentPrice !== null && $currentPrice != $subscription->last_checked_price) {
+                // Сохраняем историю цены
+                PriceHistory::create([
+                    'subscription_id' => $subscription->id,
+                    'price' => $currentPrice,
+                    'checked_at' => now(),
+                ]);
+
                 // Отправляем уведомление пользователю
                 $this->notifyUser($subscription->email, $currentPrice);
+
                 // Обновляем последнюю проверенную цену
                 $subscription->last_checked_price = $currentPrice;
                 $subscription->save();
