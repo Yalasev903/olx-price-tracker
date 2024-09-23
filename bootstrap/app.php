@@ -21,6 +21,11 @@ return Application::configure(basePath: dirname(__DIR__))
     ->booted(function () {
         // Регистрация периодической задачи
         $schedule = app(Schedule::class);
+
+        // Задача для CheckPriceJob каждые 10 минут
         $schedule->job(new CheckPriceJob)->everyTenMinutes();
+
+        // Добавление команды check:price каждые 5 минут
+        $schedule->command('check:price')->everyFiveMinutes();
     })
     ->create();

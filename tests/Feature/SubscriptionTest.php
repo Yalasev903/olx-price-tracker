@@ -16,7 +16,7 @@ class SubscriptionTest extends TestCase
 {
     $response = $this->postJson('/subscribe', [
         'url' => 'https://www.olx.ua/d/uk/obyavlenie/unversalna-kolyaska-2-v-1-carrello-sigma-crl-6509-fog-grey-IDVdUyX.html',
-        'email' => 'slasev903@gmail.com'
+        'email' => 'user@example.com'
     ]);
 
     if ($response->status() === 500) {
@@ -24,7 +24,7 @@ class SubscriptionTest extends TestCase
     }
 
     $response->assertStatus(200)->assertJson([
-        'message' => 'Subscription successful'
+        'message' => 'Subscription successful. Please check your email to verify.'
     ]);
 }
 }

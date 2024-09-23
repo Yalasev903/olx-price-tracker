@@ -84,24 +84,10 @@ class SubscriptionController extends Controller
 }
 public function verify($id, Request $request)
     {
-        $subscription = Subscription::find($id);
-
-        if (!$subscription) {
-            return response()->json(['message' => 'Subscription not found'], 404);
-        }
-
-        if ($subscription->is_verified) {
-            return response()->json(['message' => 'Subscription already verified'], 200);
-        }
-
-        if ($request->query('token') !== $subscription->verification_token) {
-            return response()->json(['message' => 'Invalid verification token'], 400);
-        }
-
-        // Подтверждаем подписку
-        $subscription->is_verified = true;
+        $subscription = Subscription::findOrFail($id);
+        $subscription->is_verified = 1;
         $subscription->save();
 
-        return response()->json(['message' => 'Subscription verified successfully'], 200);
+        return redirect('/')->with('message', 'Subscription confirmed!');
     }
 }
