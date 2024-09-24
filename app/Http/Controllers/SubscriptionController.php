@@ -81,23 +81,36 @@ class SubscriptionController extends Controller
         }
     }
 
-    public function sendVerificationEmail($email, $subscriptionId)
+    public function sendVerificationEmail($email, $subscriptionId, $token)
     {
         $verificationUrl = URL::temporarySignedRoute(
-            'subscription.verify', // Создай этот маршрут
+            'subscription.verify', // маршрут для подтверждения
             now()->addMinutes(30), // Время действия ссылки
-            ['id' => $subscriptionId]
+            ['id' => $subscriptionId, 'token' => $token] // передаем токен
         );
-
+    
         Mail::to($email)->send(new \App\Mail\VerificationEmail($verificationUrl));
     }
 
-    public function verify($id, Request $request)
+    public function verify($id, $token, Request $request)
     {
+        // Находим подписку или возвращаем 404 ошибку
         $subscription = Subscription::findOrFail($id);
-        $subscription->is_verified = 1;
+    
+        // Проверяем токен и его валидность
+        if ($subscription->verification_token !== $token) {
+            return redirect('/')->with('error', 'Invalid verification token.');
+        }
+    
+        // Проверяем, была ли подписка уже подтверждена
+        if ($subscription->is_verified) {
+            return redirect('/')->with('message', 'Subscription already confirmed!');
+        }
+    
+        // Подтверждаем подписку
+        $subscription->is_verified = true;
         $subscription->save();
-
+    
         return redirect('/')->with('message', 'Subscription confirmed!');
     }
 }

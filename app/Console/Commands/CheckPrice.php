@@ -46,26 +46,30 @@ class CheckPrice extends Command
         try {
             // Отправляем GET-запрос
             $response = Http::get($url);
-
+    
             // Проверяем успешность запроса
             if ($response->successful()) {
                 $html = $response->body();
-
+    
+                // Логируем полученный HTML
+                \Log::info("Fetched HTML for URL {$url}: {$html}");
+    
                 // Логика парсинга HTML для получения цены
-                preg_match('/<span class="price">(\d+[\.,]?\d*)<\/span>/', $html, $matches);
-
+                preg_match('/<h3 class="css-90xrc0">([\d\s]+ грн\.)<\/h3>/', $html, $matches);
+    
                 // Если цена найдена, возвращаем её
                 if (isset($matches[1])) {
-                    return (float) str_replace(',', '.', $matches[1]);
+                    return (float) str_replace([' ', 'грн.'], '', $matches[1]); // Убираем пробелы и символ валюты
                 }
             }
         } catch (\Exception $e) {
             // Логируем ошибки
             \Log::error("Error fetching price from URL: {$url}", ['error' => $e->getMessage()]);
         }
-
+    
         return null; // Если произошла ошибка, возвращаем null
     }
+    
 
     private function notifyUser($email, $price)
     {

@@ -11,7 +11,7 @@ class VerificationEmail extends Mailable
 {
     use Queueable, SerializesModels;
 
-    public $subscription;
+    public $verificationUrl;
 
     /**
      * Create a new message instance.
@@ -19,6 +19,12 @@ class VerificationEmail extends Mailable
     public function __construct(Subscription $subscription)
     {
         $this->subscription = $subscription;
+
+        // Создаем URL для подтверждения подписки
+        $this->verificationUrl = route('subscription.verify', [
+            'id' => $this->subscription->id,
+            'token' => $this->subscription->verification_token,
+        ]);
     }
 
     /**
@@ -26,13 +32,8 @@ class VerificationEmail extends Mailable
      */
     public function build()
     {
-        $verificationUrl = route('subscription.verify', [
-            'id' => $this->subscription->id,
-            'token' => $this->subscription->verification_token,
-        ]);
-
         return $this->view('emails.verify')
             ->subject('Please verify your subscription')
-            ->with(['verificationUrl' => $verificationUrl]);
+            ->with(['verificationUrl' => $this->verificationUrl]);
     }
 }
